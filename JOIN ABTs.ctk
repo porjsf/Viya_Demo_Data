@@ -1,0 +1,304 @@
+<Task schemaVersion="7.2">
+   <Registration>
+      <Name>Combine Tables</Name>
+      <Description>The Combine Tables task combines two data tables in a variety of different ways.</Description>
+      <GUID>bc6544f5-d93d-4474-a781-5798fee056c4</GUID>
+      <Procedures>SQL</Procedures>
+      <Version>5.2</Version>
+      <Links>
+         <Link href="http://documentation.sas.com/?softwareId=STUDIOBASIC&amp;softwareVersion=5.2&amp;softwareContextId=tasks&amp;requestor=inapp">SAS Studio Task Reference Guide</Link>
+         <Link href=""> </Link>
+         <Link href=""> </Link>
+		   <Link href="http://documentation.sas.com/?softwareId=MVADOC&amp;softwareVersion=5.2_9.4&amp;softwareContextId=proc_sql&amp;requestor=inapp">The SQL Procedure</Link>
+         <Link href=""> </Link>
+         <Link href=""> </Link>          
+         <Link href="http://support.sas.com/training/studio">SAS Tutorials</Link>
+      </Links>
+   </Registration>
+   
+   <Metadata>
+      
+      <DataSources> 
+         <DataSource defaultValue="" libraryEngineExclude="CAS" name="table1" required="true">
+            <Roles>
+               <Role helpMessageRef="mergevarsMsg" indent="1" minVars="1" name="mergevars1" order="true">Required match columns:</Role>
+               <Role name="keepvars1">Columns from first table</Role>
+            </Roles>
+         </DataSource>
+         <DataSource defaultValue="" libraryEngineExclude="CAS" name="table2" required="true">
+            <Roles>
+               <Role name="keepvars2">Columns from second table</Role>
+            </Roles>
+         </DataSource>         
+      </DataSources>
+
+      <Options>
+         <Option inputType="string" name="datatab">DATA</Option>
+         <Option inputType="string" name="datagrp">DATA</Option>
+         <Option inputType="string" name="datalabel1">First data table:</Option>
+         <Option inputType="string" name="datalabel2">Second data table:</Option> 
+         
+         <Option inputType="string" name="combgrp">METHOD</Option>        
+         <Option defaultValue="mergechoice" inputType="combobox" name="combcombo">Select combination method:</Option>
+         <Option inputType="string" name="mergechoice">Match merge (default)</Option>
+         <Option inputType="string" name="concatchoice">Concatenate</Option>
+         <Option inputType="string" name="onechoice">One-to-one merge</Option>
+         
+         <Option defaultValue="fullchoice" indent="1" inputType="combobox" name="mergecombo">Merge type:</Option>
+         <Option inputType="string" name="fullchoice">All matching and nonmatching rows</Option>
+         <Option inputType="string" name="innerchoice">Only matching rows</Option>
+         <Option inputType="string" name="leftchoice">Matching rows and nonmatching rows from first table</Option>
+         <Option inputType="string" name="rightchoice">Matching rows and nonmatching rows from second table</Option>
+         
+         <Option helpMessageRef="methodHelp" inputType="string" name="choiceLabel">Type of code:</Option>
+         <Option indent="1" inputType="radio" name="sqlchoice" variable="codestyle">Use PROC SQL</Option>
+         <Option indent="1" inputType="radio" name="datachoice" variable="codestyle">Use DATA Step code</Option>
+
+         <Option inputType="string" name="outputtab">OUTPUT</Option>
+         <Option inputType="string" name="outputgrp">OUTPUT DATA TABLE</Option>
+         <Option defaultValue="work.combine" inputType="outputdata" libraryEngineExclude="CAS" name="outtable" required="true">Table name:</Option>
+         <Option inputType="string" name="keepgrp">OUTPUT COLUMNS</Option>
+         <Option inputType="string" name="keeplbl">Select the columns to include in the output table.  If no columns are selected for a table then all columns will be included.</Option>
+         
+         <Option inputType="string" name="varmsg">The column {1} is not in the second table</Option>
+         <Option inputType="string" name="methodHelp">The DATA step and PROC SQL methods produce the same results when the match column values uniquely identify each row and the tables have no other columns with the same name. Otherwise, the results may differ.</Option>
+         <Option inputType="string" name="mergevarsMsg">Select one or more columns to use for matching.</Option>
+      </Options>
+      
+   </Metadata>
+   
+   <UI>
+      <Container option="datatab">
+      
+         <Group open="true" option="datagrp">
+            <OptionItem option="datalabel1"/>
+            <DataItem data="table1"/>
+            <OptionItem option="datalabel2"/>
+            <DataItem data="table2"/>            
+         </Group>
+         
+         <Group open="true" option="combgrp">
+            <OptionChoice option="combcombo">
+               <OptionItem option="mergechoice"/>
+               <OptionItem option="onechoice"/>               
+               <OptionItem option="concatchoice"/>
+            </OptionChoice>
+            <OptionChoice option="mergecombo">
+               <OptionItem option="fullchoice"/>            
+               <OptionItem option="innerchoice"/>
+               <OptionItem option="leftchoice"/>               
+               <OptionItem option="rightchoice"/>
+            </OptionChoice>
+            <OptionItem option="choiceLabel"/>
+            <OptionItem option="datachoice"/>
+            <OptionItem option="sqlchoice"/>
+            <RoleItem role="mergevars1"/>            
+         </Group>
+         
+      </Container>
+      
+      <Container option="outputtab">
+         <Group open="true" option="outputgrp">
+            <OptionItem option="outtable"/>
+         </Group>
+         <Group option="keepgrp">
+            <OptionItem option="keeplbl"/>
+            <RoleItem role="keepvars1"/>
+            <RoleItem role="keepvars2"/>            
+         </Group>
+      </Container>
+   </UI>
+    
+   <Dependencies>
+   
+      <Dependency condition="$combcombo == 'mergechoice'">
+         <Target action="show" conditionResult="true" option="mergevars1"/>
+         <Target action="hide" conditionResult="false" option="mergevars1"/>
+         <Target action="show" conditionResult="true" option="mergecombo"/>
+         <Target action="hide" conditionResult="false" option="mergecombo"/>
+      </Dependency>
+
+   </Dependencies>
+   
+   <CodeTemplate>
+      <![CDATA[
+     
+#set ($varcheck = 1)
+#if($combcombo == 'mergechoice')
+   #foreach($item in $mergevars1)
+      #if(! $table2.columnExists("$item") )
+         #set($msg = $varmsg.replace("{1}","$item"))
+         /* $msg */
+         #set($varcheck = 0)
+      #end
+   #end
+#end      
+#if($varcheck == 1)      
+
+#if($codestyle == 'datachoice')
+#set($mergelist = "")
+#if($mergevars1.size() > 0) #foreach($item in $mergevars1) #set($mergelist = $mergelist + " " + $item)#end #end
+
+## make keep lists 
+#set($keep1 = "")
+#set($keep2 = "")
+#if($keepvars1.size() > 0)
+   #foreach ($item in $keepvars1) #set($keep1 = $keep1 + " " + $item) #end     
+#end 
+#if($keepvars2.size() > 0)
+   #foreach ($item in $keepvars2) #set($keep2 = $keep2 + " " + $item) #end   
+#end 
+ 
+
+#if($combcombo == 'concatchoice')  ## Concatenate
+data $outtable;
+   set $table1 #if($keep1 !="")(keep=$keep1)#end $table2#if($keep2 !="")(keep=$keep2)#end;
+run;
+#end ## End of concatenate
+
+#if($combcombo == 'mergechoice') ## Merge
+
+proc sort data=$table1 out=work._tmpsort1_;
+   by $mergelist;
+run;
+proc sort data=$table2 out=work._tmpsort2_;
+   by $mergelist;
+run;
+data $outtable;
+
+   #if($mergecombo == 'innerchoice')
+  merge _tmpsort1_(in=in1 #if($keep1 != "")keep = $keep1 $mergelist #end) _tmpsort2_ (in=in2 #if($keep2 != "")keep = $keep2 $mergelist#end);
+   by $mergelist;    
+   if  in1 and in2 ;
+run;   
+   #end  ##end of innerchoice
+   
+   #if($mergecombo == 'rightchoice')
+   merge _tmpsort1_#if($keep1 != "")(keep = $keep1 $mergelist )#end _tmpsort2_(in=in2 #if($keep2 != "") keep = $keep2 $mergelist#end);
+   by $mergelist; 
+   if in2;
+run;   
+   #end  ## end rightchoice
+   
+   #if($mergecombo == 'leftchoice')
+   merge _tmpsort1_(in=in1#if($keep1 != "") keep = $keep1 $mergelist #end)  _tmpsort2_#if($keep2 != "")(keep = $keep2 $mergelist)#end;
+   by $mergelist; 
+   if in1;
+run;   
+   #end
+   
+   #if($mergecombo == 'fullchoice')
+   merge _tmpsort1_#if($keep1 != "") (keep = $keep1 $mergelist) #end  _tmpsort2_#if($keep2 != "")(keep = $keep2 $mergelist)#end;
+   by $mergelist;  
+run;    
+
+   #end   
+#end  ## End of merge
+
+
+#if($combcombo == 'onechoice')
+data $outtable;
+   merge $table1 #if ($keep1 != "")(keep=$keep1)#end $table2 #if ($keep2 != "")(keep=$keep2)#end;
+run;
+
+#end  ##end one to one merge
+
+#if($combcombo == 'mergechoice')
+proc delete data=work._tmpsort1_ work._tmpsort2_;
+run;
+#end
+#end ##datachoice
+
+#if($codestyle == 'sqlchoice') ## USE PROC SQL
+#set($mergelist = "")
+#set($wherelist = "")
+
+#if($mergevars1.size() > 0) 
+   #foreach($item in $mergevars1) 
+      #set($mergelist = $mergelist + " " + $item)
+      #set($wherelist = $wherelist + " a." + $item + " =b." + $item)
+   #end 
+#end
+
+## make keep lists 
+#set($keep1 = "")
+#set($keep2 = "")
+#if($keepvars1.size() > 0)
+   #foreach ($item in $keepvars1) 
+      #set($keep1 = $keep1 + " a." + $item)
+      #if($foreach.hasNext) #set($keep1 = $keep1 + ",")#end      
+   #end 
+   #else #set($keep1 = "a.*")   
+#end 
+#if($keepvars2.size() > 0)
+   #foreach ($item in $keepvars2) 
+      #set($keep2 = $keep2 + " b." + $item)
+      #if($foreach.hasNext) #set($keep2 = $keep2 + ",")#end      
+   #end 
+   #else #set($keep2 = "b.*")   
+#end 
+
+   proc sql noprint;
+#if($combcombo == 'mergechoice') ## Merge
+
+   #if($mergecombo == 'innerchoice') 
+   
+   create table $outtable as
+      select $keep1, $keep2 from $table1 as a,    
+      $table2 as b where $wherelist;
+   quit;
+   #end
+
+   #if($mergecombo == 'rightchoice')
+   create table $outtable as select $keep1, $keep2 from $table1 as a right join $table2 as b
+   on $wherelist;
+   quit;
+   #end
+
+   #if($mergecombo == 'leftchoice')
+   create table $outtable as select $keep1, $keep2 from $table1 as a left join $table2 as b
+   on $wherelist;
+   quit;
+   #end
+
+   #if($mergecombo == 'fullchoice')
+   create table $outtable as select 
+   #foreach($item in $mergevars1) coalesce(a.$item, b.$item) as $item,
+   #end
+   $keep1, $keep2 from $table1 as a full join $table2 as b on $wherelist;
+   quit;
+   #end
+
+#end ##sql merge choice
+
+#if($combcombo == 'concatchoice')  ## Concatenate
+   create table $outtable as select $keep1 from $table1 as a outer union corr select $keep2 from $table2 as b;
+quit;
+#end ## End of concatenate
+
+#if($combcombo == 'onechoice')
+create table $outtable as select $keep1, $keep2 from
+(select *, monotonic() as __n__ from $table1) as a
+full join
+(select *, monotonic() as __n__ from $table2) as b
+on a.__n__ = b.__n__;
+#if( !($keepvars1.size() > 0 && $keepvars2.size() > 0))alter table $outtable drop __n__;#end
+quit;
+
+#end  ##end one to one merge
+
+
+
+#end  ## sql choice
+
+
+#end ##varcheck
+      ]]>
+   </CodeTemplate>
+<TemplateValues version="5.1">
+<![CDATA[
+{"table1":{"librarytable":"WORK.LG_ABT_ORIG"},"mergevars1":"","keepvars1":"","table2":{"librarytable":"WORK.LG_ABT_ORIG_EXTRA"},"keepvars2":"","combcombo":[{"value":"concatchoice","displayValue":"Concatenate","keys":["concatchoice",null,"Concatenate"],"label":"Concatenate","baseid":"{\"value\":\"concatchoice\",\"label\":\"Concatenate\"}","id":"{\"value\":\"concatchoice\",\"label\":\"Concatenate\"}1"}],"mergecombo":[{"value":"fullchoice","displayValue":"All matching and nonmatching rows","keys":["fullchoice",null,"All matching and nonmatching rows"],"label":"All matching and nonmatching rows","baseid":"{\"value\":\"fullchoice\",\"label\":\"All matching and nonmatching rows\"}","id":"{\"value\":\"fullchoice\",\"label\":\"All matching and nonmatching rows\"}1"}],"sqlchoice":"1","codestyle":"sqlchoice","datachoice":"0","outtable":{"value":"work.LG_ABT_V2","cbSelected":false}}
+]]>
+</TemplateValues>
+
+</Task>
